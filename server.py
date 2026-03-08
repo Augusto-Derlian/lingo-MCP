@@ -1,5 +1,6 @@
 import sqlite3
 import datetime
+from typing import Union
 from fastmcp import FastMCP
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
@@ -47,33 +48,45 @@ def get_due_words(limit: int = 5):
         return cursor.fetchall()
 
 @mcp.tool()
-def update_word_rating(expression: str, new_rating: int, notes: str = ""):
-    """Updates the user's mastery rating (1-5) for a specific word/phrase."""
-    # Ensure rating is within 1-5
-    rating = max(1, min(5, new_rating))
-    next_review = calculate_next_review(rating)
-    last_seen = datetime.datetime.now().isoformat()
-
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("""
-            INSERT INTO vocabulary (expression, rating, last_seen, next_review, notes)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(expression) DO UPDATE SET
-                rating = excluded.rating,
-                last_seen = excluded.last_seen,
-                next_review = excluded.next_review,
-                notes = COALESCE(NULLIF(excluded.notes, ''), vocabulary.notes)
-        """, (expression.lower(), rating, last_seen, next_review, notes))
-    
-    return f"Success: '{expression}' updated to Rating {rating}. Next review: {next_review[:10]}"
+def update_word_rating(expression: Union[str, list], new_rating: int):
+    """Updates or Inserts a single word or a list of words."""
+    with sqlite3.connect("lingo_vocab.db") as conn:
+        cursor = conn.cursor()
+        
+        if isinstance(expression, str):
+            expressions = [expression]
+        else:
+            expressions = expression
+            
+        # SQLite 'INSERT OR REPLACE' or 'UPSERT' (requires UNIQUE constraint on expression)
+        # Assuming 'expression' is your PRIMARY KEY or has a UNIQUE constraint:
+        data = [(word, new_rating) for word in expressions]
+        
+        cursor.executemany("""
+            INSERT INTO vocabulary (expression, rating) 
+            VALUES (?, ?)
+            ON CONFLICT(expression) DO UPDATE SET rating = excluded.rating
+        """, data)
+        
+        updated_count = conn.total_changes
+        
+    return f"Processed {updated_count} expression(s) (New or Updated) to Rating {new_rating}."
 
 @mcp.tool()
 def get_learning_stats():
-    """Returns a summary of how many words are at each rating level."""
+    """Returns a summary of how many words are at each rating level and grammar count."""
     with sqlite3.connect(DB_PATH) as conn:
+        # Get Vocabulary stats
         cursor = conn.execute("SELECT rating, COUNT(*) FROM vocabulary GROUP BY rating")
-        stats = cursor.fetchall()
-        return {f"Rating {r}": count for r, count in stats}
+        stats = {f"Rating {r}": count for r, count in cursor.fetchall()}
+        
+        # Get Grammar stats
+        cursor = conn.execute("SELECT COUNT(*) FROM grammar_focus WHERE status = 'Active'")
+        grammar_count = cursor.fetchone()[0]
+        
+        # Merge them into one status object
+        stats["Active Grammar Targets"] = grammar_count
+        return stats
 
 @mcp.tool()
 def get_words_by_rating(rating: int):
