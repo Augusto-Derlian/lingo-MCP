@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "lingo-rate": {
+      "command": "python",
+      "args": ["server.py"]
+    }
+  }
+}
