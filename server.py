@@ -79,7 +79,6 @@ def get_learning_stats():
 def get_words_by_rating(rating: int):
     """Retrieves words from the 'vocabulary' table by rating."""
     # We keep it simple: No complex type hints in the header
-    import sqlite3 # Importing inside the tool can sometimes prevent discovery crashes
     
     conn = sqlite3.connect("lingo_vocab.db")
     cursor = conn.cursor()
@@ -102,7 +101,6 @@ def get_words_by_rating(rating: int):
 @mcp.tool()
 def get_random_words(limit: int = 5):
     """Retrieves a random selection of words from the 'vocabulary' table."""
-    import sqlite3
     with sqlite3.connect("lingo_vocab.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -122,7 +120,6 @@ def get_random_words(limit: int = 5):
 @mcp.tool()
 def get_recent_words(limit: int = 5):
     """Retrieves the most recently added words from the 'vocabulary' table."""
-    import sqlite3
     with sqlite3.connect("lingo_vocab.db") as conn:
         cursor = conn.cursor()
         cursor.execute(
@@ -138,6 +135,61 @@ def get_recent_words(limit: int = 5):
     for w in words:
         result.append(f"- {w[0]} (Rating: {w[1]})")
     return "\n".join(result)
+
+with sqlite3.connect("lingo_vocab.db") as conn:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS grammar_focus (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT NOT NULL,
+            last_mistake TEXT,
+            priority INTEGER DEFAULT 1,
+            status TEXT DEFAULT 'Active'
+        )
+    """)
+
+@mcp.tool()
+def add_grammar_subject(subject: str, mistake_context: str = None):
+    """Saves a grammar topic the user needs to work on."""
+    import sqlite3
+    with sqlite3.connect("lingo_vocab.db") as conn:
+        cursor = conn.cursor()
+        # Check if subject exists to update priority instead of duplicating
+        cursor.execute("SELECT id, priority FROM grammar_focus WHERE subject = ?", (subject,))
+        exists = cursor.fetchone()
+        
+        if exists:
+            new_priority = exists[1] + 1
+            cursor.execute("UPDATE grammar_focus SET priority = ?, last_mistake = ? WHERE id = ?", 
+                           (new_priority, mistake_context, exists[0]))
+            return f"Updated grammar focus: '{subject}' (Priority increased to {new_priority})"
+        else:
+            cursor.execute("INSERT INTO grammar_focus (subject, last_mistake) VALUES (?, ?)", 
+                           (subject, mistake_context))
+            return f"Added new grammar focus: '{subject}'"
+
+@mcp.tool()
+def get_grammar_targets(limit: int = 3):
+    """Retrieves high-priority grammar subjects for review."""
+    with sqlite3.connect("lingo_vocab.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT subject, priority, last_mistake 
+            FROM grammar_focus 
+            WHERE status = 'Active' 
+            ORDER BY priority DESC 
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+    
+    if not rows:
+        return "No active grammar targets found! You're doing great."
+    
+    res = ["🎯 Current Grammar Focus Areas:"]
+    for r in rows:
+        res.append(f"- {r[0]} (Priority Level: {r[1]})")
+        if r[2]: 
+            res.append(f"  * Context: \"{r[2]}\"")
+    return "\n".join(res)
 
 if __name__ == "__main__":
     # 1. Create the MCP app with CORS middleware included
