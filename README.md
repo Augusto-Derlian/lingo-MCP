@@ -7,8 +7,8 @@ An AI-powered language learning assistant designed to manage your personal vocab
 ## 🚀 Getting Started
 
 ### Prerequisites
-* A host environment supporting **Model Context Protocol (MCP)** (e.g., Claude Desktop, ChatGPT with MCP, or custom AI interfaces).
-* The **SuperAssistant Extension** installed in your browser or AI environment.
+* A host environment supporting **Model Context Protocol (MCP)** (e.g., Gemini on the browser).
+* The **SuperAssistant Extension** installed in your browser.
 
 ### Setup Instructions
 1.  **Install the Extension:** Ensure the SuperAssistant extension is active in your browser.
@@ -45,11 +45,7 @@ Begin by asking the assistant for your learning stats or due words. The assistan
 
 📊 Mastery Levels Defined
 Rating 1: Brand new / Hard to remember.
-
-Rating 2: In progress / Familiar but requires effort.
-
+Rating 2: In progress / Familiar but requires effort.'
 Rating 3: Intermediate / Can use in simple sentences.
-
 Rating 4: Advanced / Confident usage.
-
 Rating 5: Mastered / Natural part of vocabulary.
