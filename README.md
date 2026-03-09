@@ -1,6 +1,8 @@
 # Start the server by running
 > python server.py
 
+![LingoRate Interface](images/image1.jpg)
+
 # 📚 SuperAssistant Vocabulary Tutor (MCP)
 
 An AI-powered language learning assistant designed to manage your personal vocabulary database using the Model Context Protocol. This project helps users move words from "passive" recognition to "active" mastery through spaced repetition and contextual practice.
