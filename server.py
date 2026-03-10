@@ -29,7 +29,7 @@ def init_db():
 
 init_db()
 
-# 3. Helper Logic (Simplified SRS)
+# 3. Helper Logic (Simplified Spaced Repetition System)
 def calculate_next_review(rating):
     days = {1: 1, 2: 3, 3: 7, 4: 15, 5: 30}
     delta = days.get(rating, 1)
@@ -48,19 +48,25 @@ def get_due_words(limit: int = 5):
         return cursor.fetchall()
 
 @mcp.tool()
-def update_word_rating(expression: Union[str, list], new_rating: int):
-    """Updates or Inserts a single word or a list of words."""
+def update_word_rating(expression: Union[str, list[str]], new_rating: Union[int, list[int]]):
+    """Updates or Inserts a single word/rating or a list of words/ratings."""
     with sqlite3.connect("lingo_vocab.db") as conn:
         cursor = conn.cursor()
         
-        if isinstance(expression, str):
-            expressions = [expression]
+        # Normalize expressions to a list
+        expressions = [expression] if isinstance(expression, str) else expression
+        
+        # Normalize ratings to a list of the same length
+        if isinstance(new_rating, int):
+            ratings = [new_rating] * len(expressions)
         else:
-            expressions = expression
+            ratings = new_rating
+
+        # Validation: ensure the lists match in length
+        if len(expressions) != len(ratings):
+            return "Error: The number of expressions must match the number of ratings provided."
             
-        # SQLite 'INSERT OR REPLACE' or 'UPSERT' (requires UNIQUE constraint on expression)
-        # Assuming 'expression' is your PRIMARY KEY or has a UNIQUE constraint:
-        data = [(word, new_rating) for word in expressions]
+        data = list(zip(expressions, ratings))
         
         cursor.executemany("""
             INSERT INTO vocabulary (expression, rating) 
@@ -70,7 +76,8 @@ def update_word_rating(expression: Union[str, list], new_rating: int):
         
         updated_count = conn.total_changes
         
-    return f"Processed {updated_count} expression(s) (New or Updated) to Rating {new_rating}."
+    rating_msg = f"Rating {new_rating}" if isinstance(new_rating, int) else "their respective ratings"
+    return f"Processed {updated_count} expression(s) (New or Updated) to {rating_msg}."
 
 @mcp.tool()
 def get_learning_stats():
