@@ -156,6 +156,19 @@ def get_recent_words(limit: int = 5):
         result.append(f"- {w[0]} (Rating: {w[1]})")
     return "\n".join(result)
 
+@mcp.tool()
+def delete_expression(expression: Union[str, list[str]]):
+    """Permanently removes one or more expressions from the vocabulary database."""
+    with sqlite3.connect("lingo_vocab.db") as conn:
+        cursor = conn.cursor()
+        # Normalize input to a list
+        targets = [expression] if isinstance(expression, str) else expression
+        
+        cursor.executemany("DELETE FROM vocabulary WHERE expression = ?", [(t,) for t in targets])
+        changes = conn.total_changes
+        
+    return f"Successfully removed {changes} entries."
+
 with sqlite3.connect("lingo_vocab.db") as conn:
     conn.execute("""
         CREATE TABLE IF NOT EXISTS grammar_focus (
