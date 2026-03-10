@@ -48,25 +48,25 @@ def get_due_words(limit: int = 5):
         return cursor.fetchall()
 
 @mcp.tool()
-def update_word_rating(expression: Union[str, list[str]], new_rating: Union[int, list[int]]):
+def update_word_rating(expression: str | list[str], new_rating: int | list[int]):
     """Updates or Inserts words and refreshes last_seen/next_review."""
     with sqlite3.connect("lingo_vocab.db") as conn:
         cursor = conn.cursor()
         
+        # Standardize to lists
         expressions = [expression] if isinstance(expression, str) else expression
         if isinstance(new_rating, int):
             ratings = [new_rating] * len(expressions)
         else:
             ratings = new_rating
 
-        # We can calculate a basic next_review based on the rating
-        # e.g., Rating 5 = Review in 7 days, Rating 1 = Review tomorrow
         now = datetime.datetime.now()
-        
         data = []
         for word, rate in zip(expressions, ratings):
-            next_date = now + datetime.timedelta(days=rate * 2) # Simple SRS logic
-            data.append((word, rate, now, next_date))
+            # Normalizing to lowercase here prevents case-based duplicates
+            clean_word = word.strip().lower() 
+            next_date = now + datetime.timedelta(days=rate * 2)
+            data.append((clean_word, rate, now, next_date))
 
         cursor.executemany("""
             INSERT INTO vocabulary (expression, rating, last_seen, next_review) 
@@ -77,7 +77,7 @@ def update_word_rating(expression: Union[str, list[str]], new_rating: Union[int,
                 next_review = excluded.next_review
         """, data)
         
-    return f"Processed {len(expressions)} word(s). Timestamps updated for {', '.join(expressions)}."
+    return f"Processed {len(expressions)} word(s) into lowercase format."
 
 @mcp.tool()
 def get_learning_stats():
