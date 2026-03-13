@@ -52,7 +52,7 @@ def update_word_rating(expression: str | list[str], new_rating: int | list[int])
                 next_review = excluded.next_review
         """, data)
         
-    return f"Processed {len(expressions)} word(s) into lowercase format."
+    return f"Processed {len(expressions)} word(s)."
 
 @mcp.tool()
 def get_learning_stats():
